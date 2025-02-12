@@ -1,0 +1,15 @@
+{
+  "language": "en",
+  "ignorePaths": ["node_modules/**", "config/**", "dist/**", "public/**"],
+  "words": [
+    "certificatemanager",
+    "chgrp",
+    "dify",
+    "elasticloadbalancing",
+    "elasticloadbalancingv2",
+    "elbv",
+    "gpasswd",
+    "xvda",
+    "hata"
+  ]
+}
