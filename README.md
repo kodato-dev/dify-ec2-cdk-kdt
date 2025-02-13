@@ -170,8 +170,6 @@ Contributions are welcome! Please:
 - Refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for best practices and instructions on how to submit changes.
 
 Thank you for helping us improve this project!
-```
 
----
 
 
