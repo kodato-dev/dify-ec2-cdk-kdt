@@ -1,13 +1,18 @@
 # Dify-EC2-CDK-Blueprint
 
 Deploy [Dify](https://dify.ai/), an LLM app development platform, on AWS using **EC2** and **AWS CDK**.  
-This blueprint focuses on a **simple** EC2-based deployment, fronted by an Application Load Balancer (ALB).  
+This blueprint focuses on a **simple** EC2-based deployment, fronted by an Application Load Balancer (ALB).
 
 ## Architecture Overview
 
+Below is the AWS architecture for this deployment:
+
+![AWS Architecture](images/README/architecture.png)
+
 By default, this project creates:
+
 - A new **VPC** with two **public subnets** (configurable CIDRs).
-- One **EC2 instance** running Amazon Linux 2023.  
+- One **EC2 instance** running Amazon Linux 2023.
   - Docker and Docker Compose are installed via user data.
   - Dify is cloned from GitHub and automatically started.
 - An **Application Load Balancer** (ALB) to route traffic to the EC2 instance.
@@ -53,8 +58,9 @@ npm install
 
 ### 3. Optional: Adjust Configuration
 
-- Open `bin/difyCdk.ts`. The stack expects a **context parameter** called `environment` (e.g., `dev` or `prod`).  
+- Open `bin/difyCdk.ts`. The stack expects a **context parameter** called `environment` (e.g., `dev` or `prod`).
 - You can also customize or extend these properties:
+
   - `certificateArn` (optional): If omitted, the ALB will not set up an HTTPS listener.
   - `stackName`: Provide a custom name for the CloudFormation stack if desired.
 
@@ -69,7 +75,7 @@ You can override these parameter values at deploy time with the `--parameters` f
 
 ### 4. Bootstrap Your AWS Environment (One-Time)
 
-If you’ve never used CDK in your AWS account/region, run:
+If you've never used CDK in your AWS account/region, run:
 
 ```bash
 cdk bootstrap
@@ -85,15 +91,15 @@ Deploy with the environment context:
 cdk deploy -c environment=dev
 ```
 
-- CDK will prompt for the creation/updates of IAM roles.  
-- After successful deployment, you’ll see outputs like:
+- CDK will prompt for the creation/updates of IAM roles.
+- After successful deployment, you'll see outputs like:
   - **ALBEndpoint**: the DNS name of the ALB.
   - **InstancePublicIP**: the public IP of the EC2 instance.
   - **InstanceId**: the ID of the created EC2 instance.
 
 ### 6. Accessing Dify
 
-- Use the ALB DNS name (e.g. `http://<ALB_ENDPOINT>`) to open the Dify interface.  
+- Use the ALB DNS name (e.g. `http://<ALB_ENDPOINT>`) to open the Dify interface.
 - If you supplied `certificateArn` and set up Route 53 for your domain, create an A-record that points your domain (e.g. `dify.example.com`) to the ALB. Then access `https://dify.example.com`.
 
 ---
@@ -101,9 +107,10 @@ cdk deploy -c environment=dev
 ## Custom Domain Setup (Optional)
 
 For a custom domain (e.g. `dify.example.com`):
-1. Request or import an SSL certificate via [AWS Certificate Manager](https://docs.aws.amazon.com/acm/latest/userguide/gs.html).  
-2. Pass the certificate ARN to the stack either as an environment variable or a constructor prop (see `certificateArn`).  
-3. Create a Route 53 A-record that routes to your ALB’s DNS name.
+
+1. Request or import an SSL certificate via [AWS Certificate Manager](https://docs.aws.amazon.com/acm/latest/userguide/gs.html).
+2. Pass the certificate ARN to the stack either as an environment variable or a constructor prop (see `certificateArn`).
+3. Create a Route 53 A-record that routes to your ALB's DNS name.
 
 ---
 
@@ -124,15 +131,17 @@ For a custom domain (e.g. `dify.example.com`):
 
 ## Troubleshooting
 
-- **Load Balancer Health Check Fails**  
-  - Verify that your EC2 instance is running Docker Compose and that the container is listening on port `80`.  
+- **Load Balancer Health Check Fails**
+
+  - Verify that your EC2 instance is running Docker Compose and that the container is listening on port `80`.
   - The user data script installs Docker & Compose, clones Dify, then does `docker-compose up -d`.
 
-- **Parameter Mismatches**  
+- **Parameter Mismatches**
+
   - Make sure to pass the correct key pair name or IP ranges if you have stricter firewall settings.
 
-- **Route 53 Not Resolving**  
-  - Confirm that your domain is managed by Route 53 or that your DNS provider’s A-record points correctly to the ALB.
+- **Route 53 Not Resolving**
+  - Confirm that your domain is managed by Route 53 or that your DNS provider's A-record points correctly to the ALB.
 
 ---
 
@@ -140,7 +149,7 @@ For a custom domain (e.g. `dify.example.com`):
 
 - You can **customize** the `userDataScript` in `EC2InstanceConstruct` (within `lib/constructs/ec2InstanceConstruct.ts`) to adjust how Dify is installed or to run additional commands.
 - For larger or production-grade deployments (with managed database, caching, etc.), check out the [aws-samples/dify-self-hosted-on-aws](https://github.com/aws-samples/dify-self-hosted-on-aws) repo for a more robust solution.
-- This blueprint uses a **single** EC2 instance. For HA/DR or auto-scaling, you’d need to adapt the stack to either an Auto Scaling Group or ECS/Fargate.
+- This blueprint uses a **single** EC2 instance. For HA/DR or auto-scaling, you'd need to adapt the stack to either an Auto Scaling Group or ECS/Fargate.
 
 ---
 
@@ -166,10 +175,8 @@ You should also check [Dify's license](https://github.com/langgenius/dify/blob/m
 ## Contributing
 
 Contributions are welcome! Please:
+
 - Read our [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) for community guidelines.
 - Refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for best practices and instructions on how to submit changes.
 
 Thank you for helping us improve this project!
-
-
-
