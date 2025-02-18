@@ -1,0 +1,14 @@
+name: CDK Diff and Deploy - main branch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  cdk-workflow:
+    uses: ./.github/workflows/cdk-workflow.yml
+    with:
+      environment: prod
+    secrets: inherit
