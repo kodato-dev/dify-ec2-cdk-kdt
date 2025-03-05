@@ -11,8 +11,8 @@ interface LoadBalancerConstructProps {
   envKey: "dev" | "prod";
   vpc: ec2.IVpc;
   ec2Instance: ec2.Instance;
-  albAllowedCIDR?: string;
   certificateArn: string;
+  albSecurityGroup: ec2.ISecurityGroup;
 }
 
 export class LoadBalancerConstruct extends Construct {
@@ -24,24 +24,11 @@ export class LoadBalancerConstruct extends Construct {
     // Import existing certificate (already created in AWS Console)
     const certificate = acm.Certificate.fromCertificateArn(this, "ImportedCertificate", props.certificateArn);
 
-    // ALB security group (allows HTTP and HTTPS in)
-    const albSecurityGroup = new ec2.SecurityGroup(this, `ApplicationLoadBalancerSecurityGroup-${props.envKey}`, {
-      vpc: props.vpc,
-      description: `Security Group for ALB - env: ${props.envKey}`,
-      allowAllOutbound: true,
-    });
-    albSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(props.albAllowedCIDR ?? "0.0.0.0/0"),
-      ec2.Port.tcp(80),
-      "Allow HTTP from the world (or specified CIDR)"
-    );
-    albSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(props.albAllowedCIDR ?? "0.0.0.0/0"),
-      ec2.Port.tcp(443),
-      "Allow HTTPS from the world (or specified CIDR)"
-    );
+    // Use the SG passed in from the stack rather than creating a new one here
+    // (So we remove the security group creation logic and references to albAllowedCIDR.)
+    const albSecurityGroup = props.albSecurityGroup;
 
-    // Create the ALB
+    // Create the ALB with the existing ALB SG
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, `ApplicationLoadBalancer-${props.envKey}`, {
       vpc: props.vpc,
       internetFacing: true,
@@ -67,9 +54,9 @@ export class LoadBalancerConstruct extends Construct {
       certificates: [certificate],
     });
 
-    // Corrected Line: Wrap the instance in an InstanceTarget, plus assigning a target group name
+    // Forward traffic to the EC2 instance
     httpsListener.addTargets("EC2Target", {
-      port: 80, // traffic will be forwarded from ALB:443 => Instance:80
+      port: 80, // ALB 443 => Instance 80
       targets: [new elbv2_targets.InstanceTarget(props.ec2Instance)],
       healthCheck: {
         path: "/apps",
