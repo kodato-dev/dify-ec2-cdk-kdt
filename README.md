@@ -68,10 +68,37 @@ npm install
   - `VpcCIDR` (default `192.168.0.0/16`)
   - `Subnet1CIDR` (default `192.168.0.0/20`)
   - `Subnet2CIDR` (default `192.168.16.0/20`)
-  - `AllowedCIDR` (default `0.0.0.0/0`)
   - `KeyName` (default `dify-key`)
 
 You can override these parameter values at deploy time with the `--parameters` flag or via a `cdk.json` file.
+
+### 3.1. Configure SSH Access
+
+Before deploying, update the `sshAllowedIPs` array in `lib/difyCdkStack.ts` with your IP addresses:
+
+```typescript
+const sshAllowedIPs = [
+  "1.1.1.1/32", // Replace with your IP
+  "2.2.2.2/32", // Replace with your IP
+  "3.3.3.3/32", // Replace with your IP
+  "4.4.4.4/32", // Replace with your IP
+];
+```
+
+### 3.2. Configure GitHub Actions (Optional)
+
+If you want to use the included GitHub workflows for CI/CD:
+
+1. Set up the following secrets in your GitHub repository:
+
+   - `AWS_CDK_ACCESS_KEY_ID`: AWS access key with deployment permissions
+   - `AWS_CDK_SECRET_ACCESS_KEY`: Corresponding AWS secret key
+   - `CERTIFICATE_ARN_DEV`: Certificate ARN for the dev environment
+   - `CERTIFICATE_ARN_PROD`: Certificate ARN for the prod environment
+
+2. The workflows will automatically:
+   - Run `cdk diff` on pull requests and comment the results
+   - Deploy to the specified environment when merged to the main branch
 
 ### 4. Bootstrap Your AWS Environment (One-Time)
 
@@ -114,14 +141,68 @@ For a custom domain (e.g. `dify.example.com`):
 
 ---
 
+## Security Configuration
+
+### SSH Access Configuration
+
+The stack has been updated to use a more secure approach for SSH access. Instead of using a broad CIDR range, specific IP addresses are now explicitly allowed:
+
+1. Open `lib/difyCdkStack.ts`
+2. Find and update the `sshAllowedIPs` array with your allowed IP addresses:
+   ```typescript
+   const sshAllowedIPs = [
+     "1.1.1.1/32", // Replace with your IP
+     "2.2.2.2/32", // Replace with your IP
+     "3.3.3.3/32", // Replace with your IP
+     "4.4.4.4/32", // Replace with your IP
+   ];
+   ```
+3. Each IP should be in CIDR notation with `/32` suffix for a single IP address.
+
+### Security Group Architecture
+
+The stack now uses a centralized architecture for security groups:
+
+- The ALB security group is created at the stack level and shared with other constructs
+- The EC2 instance only accepts HTTP traffic from the ALB (not from the public internet)
+- SSH access is restricted to specific IP addresses
+
+---
+
+## GitHub Workflows
+
+This project includes GitHub workflows for automated CDK deployment:
+
+### Workflow Configuration
+
+1. **Required GitHub Secrets**:
+
+   - `AWS_CDK_ACCESS_KEY_ID`: AWS access key with permissions to deploy the stack
+   - `AWS_CDK_SECRET_ACCESS_KEY`: Corresponding AWS secret key
+   - `CERTIFICATE_ARN_DEV`: ARN of the certificate for the dev environment
+   - `CERTIFICATE_ARN_PROD`: ARN of the certificate for the prod environment
+
+2. **Workflow Files**:
+
+   - `cdk-workflow.yml`: Main workflow with diff and deploy jobs
+   - `cdk-diff-deploy-dev.yml`: Dev environment workflow
+   - `cdk-diff-deploy-main.yml`: Production environment workflow
+
+3. **Workflow Behavior**:
+   - On pull request: Runs `cdk diff` and comments the result on the PR
+   - On merge to main: Deploys the stack to the specified environment
+
+---
+
 ## SSHing into the EC2 Instance
 
 1. Make sure you have an **EC2 key pair** matching the parameter `KeyName` (default: `dify-key`).
-2. Once the stack finishes:
+2. Make sure your current IP address is in the `sshAllowedIPs` list in `lib/difyCdkStack.ts`.
+3. Once the stack finishes:
    ```bash
    ssh -i /path/to/dify-key.pem ec2-user@<InstancePublicIP>
    ```
-3. Once inside:
+4. Once inside:
    ```bash
    docker ps
    ```
@@ -150,6 +231,8 @@ For a custom domain (e.g. `dify.example.com`):
 - You can **customize** the `userDataScript` in `EC2InstanceConstruct` (within `lib/constructs/ec2InstanceConstruct.ts`) to adjust how Dify is installed or to run additional commands.
 - For larger or production-grade deployments (with managed database, caching, etc.), check out the [aws-samples/dify-self-hosted-on-aws](https://github.com/aws-samples/dify-self-hosted-on-aws) repo for a more robust solution.
 - This blueprint uses a **single** EC2 instance. For HA/DR or auto-scaling, you'd need to adapt the stack to either an Auto Scaling Group or ECS/Fargate.
+- Security has been improved by using a shared ALB security group and explicit SSH IP allow lists.
+- GitHub Workflows are included for CI/CD deployment to different environments.
 
 ---
 
