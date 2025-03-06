@@ -5,7 +5,7 @@ import { NetworkConstruct } from "./constructs/networkConstruct";
 import { SecurityConstruct } from "./constructs/securityConstruct";
 import { EC2InstanceConstruct } from "./constructs/ec2InstanceConstruct";
 import { LoadBalancerConstruct } from "./constructs/loadBalancerConstruct";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
+import { aws_ec2 as ec2 } from "aws-cdk-lib";
 
 // --- Updated interface with required envKey and certificateArn ---
 interface DifyStackProps extends cdk.StackProps {
@@ -36,11 +36,6 @@ export class DifyStack extends cdk.Stack {
       default: "192.168.16.0/20",
       description: "CIDR block for Subnet 2",
     });
-    const allowedCIDR = new cdk.CfnParameter(this, "AllowedCIDR", {
-      type: "String",
-      default: "0.0.0.0/0",
-      description: "CIDR block to allow HTTP and SSH traffic from",
-    });
     const keyName = new cdk.CfnParameter(this, "KeyName", {
       type: "String",
       default: "dify-key",
@@ -50,7 +45,7 @@ export class DifyStack extends cdk.Stack {
     // Use a hard-coded value for the Amazon Linux AMI SSM Parameter
     const amazonLinuxAMI = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64";
 
-    // Instantiate Constructs
+    // 1) Create the VPC
     const network = new NetworkConstruct(this, "NetworkConstruct", {
       envKey: props.envKey,
       vpcCIDR: vpcCIDR.valueAsString,
@@ -58,26 +53,60 @@ export class DifyStack extends cdk.Stack {
       subnet2CIDR: subnet2CIDR.valueAsString,
     });
 
+    // 2) Create the ALB Security Group in the Stack
+    //    so we can pass it into both SecurityConstruct (for the EC2 inbound rule)
+    //    and LoadBalancerConstruct (for the ALB itself).
+    const albSecurityGroup = new ec2.SecurityGroup(this, `ApplicationLoadBalancerSecurityGroup-${props.envKey}`, {
+      vpc: network.vpc,
+      description: `Security Group for ALB - env: ${props.envKey}`,
+      allowAllOutbound: true,
+    });
+    albSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4("0.0.0.0/0"),
+      ec2.Port.tcp(80),
+      "Allow HTTP from the world"
+    );
+    albSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4("0.0.0.0/0"),
+      ec2.Port.tcp(443),
+      "Allow HTTPS from the world"
+    );
+
+    // 3) Define which 4 IPs are allowed for SSH
+    //    (Replace these with real IPs!)
+    const sshAllowedIPs = [
+      "1.1.1.1/32",
+      "2.2.2.2/32",
+      "3.3.3.3/32",
+      "4.4.4.4/32",
+    ];
+
+    // 4) Create the SecurityConstruct (for the EC2 instance)
+    //    Pass the ALB SG and the list of SSH IPs
     const security = new SecurityConstruct(this, "SecurityConstruct", {
       envKey: props.envKey,
       vpc: network.vpc,
-      allowedCIDR: allowedCIDR.valueAsString,
+      albSecurityGroup: albSecurityGroup,
+      sshAllowedIPs: sshAllowedIPs,
     });
 
+    // 5) Create the EC2 instance
     const ec2Instance = new EC2InstanceConstruct(this, "EC2InstanceConstruct", {
       envKey: props.envKey,
       vpc: network.vpc,
       subnet: network.subnet1,
-      securityGroup: security.securityGroup,
+      securityGroup: security.securityGroup, // Security group from our SecurityConstruct
       keyName: keyName.valueAsString,
       amazonLinuxAMI: amazonLinuxAMI,
     });
 
+    // 6) Create the Load Balancer
     const albConstruct = new LoadBalancerConstruct(this, "LoadBalancerConstruct", {
       envKey: props.envKey,
       vpc: network.vpc,
       ec2Instance: ec2Instance.instance,
       certificateArn: props.certificateArn ?? "",
+      albSecurityGroup: albSecurityGroup, // Reuse the SG we created above
     });
 
     new cdk.CfnOutput(this, "ALBEndpoint", {
