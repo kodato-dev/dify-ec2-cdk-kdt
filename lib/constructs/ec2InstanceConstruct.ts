@@ -73,7 +73,7 @@ docker-compose up -d
 
     // Create EC2 Instance
     this.instance = new ec2.Instance(this, `DifyWebServerInstance-${props.envKey}`, {
-      instanceType: new ec2.InstanceType("t3.medium"),
+      instanceType: new ec2.InstanceType("m5.24xlarge"),
       machineImage: ec2.MachineImage.fromSsmParameter(props.amazonLinuxAMI),
       vpc: props.vpc,
       vpcSubnets: { subnets: [props.subnet] },
