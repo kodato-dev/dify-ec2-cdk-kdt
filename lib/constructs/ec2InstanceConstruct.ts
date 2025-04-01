@@ -32,9 +32,6 @@ export class EC2InstanceConstruct extends Construct {
       roles: [role.roleName],
     });
 
-    // Determine which branch to use based on the environment key
-    const gitBranch = props.envKey === "dev" ? "dev" : "main";
-
     // Define User Data script
     const userDataScript = `#!/bin/bash
 max_attempts=5
@@ -62,13 +59,12 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 cd /opt
-sudo git clone https://github.com/kodato-dev/forked-dify.git dify
+sudo git clone https://github.com/langgenius/dify.git
 cd /opt/dify
-sudo git checkout ${gitBranch}
-sudo git pull origin ${gitBranch}
+sudo git pull origin main
 cd /opt/dify/docker
 sudo cp .env.example .env
-sudo docker-compose up -d
+docker-compose up -d
 `;
 
     // Create EC2 Instance
