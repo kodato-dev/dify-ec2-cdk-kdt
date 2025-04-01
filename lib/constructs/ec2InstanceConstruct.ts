@@ -62,7 +62,7 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 cd /opt
-sudo git clone https://github.com/kodato-dev/forked-dify.git
+sudo git clone https://github.com/kodato-dev/forked-dify.git dify
 cd /opt/dify
 sudo git checkout ${gitBranch}
 sudo git pull origin ${gitBranch}
