@@ -10,6 +10,7 @@ on:
 jobs:
   cdk-diff:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: github.event.action != 'closed'
     steps:
       - uses: actions/checkout@v3
@@ -65,6 +66,7 @@ jobs:
 
   cdk-deploy:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: github.event.pull_request.merged == true
     steps:
       - uses: actions/checkout@v3
