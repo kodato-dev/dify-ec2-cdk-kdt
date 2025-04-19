@@ -31,11 +31,8 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_DEV }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_PROD }}" >> $GITHUB_ENV
-          fi
+          echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN }}" >> $GITHUB_ENV
+          echo "SSH_ALLOWED_IPS=${{ secrets.SSH_ALLOWED_IPS }}" >> $GITHUB_ENV
 
       - name: CDK Diff
         id: cdk-diff
@@ -83,11 +80,8 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_DEV }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_PROD }}" >> $GITHUB_ENV
-          fi
+          echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN }}" >> $GITHUB_ENV
+          echo "SSH_ALLOWED_IPS=${{ secrets.SSH_ALLOWED_IPS }}" >> $GITHUB_ENV
 
       - name: CDK Deploy
         run: npx cdk deploy -c environment=${{ inputs.environment }} --require-approval never

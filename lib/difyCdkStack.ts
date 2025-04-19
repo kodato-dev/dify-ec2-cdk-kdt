@@ -43,7 +43,8 @@ export class DifyStack extends cdk.Stack {
     });
 
     // Use a hard-coded value for the Amazon Linux AMI SSM Parameter
-    const amazonLinuxAMI = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64";
+    const amazonLinuxAMI =
+      "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64";
 
     // 1) Create the VPC
     const network = new NetworkConstruct(this, "NetworkConstruct", {
@@ -56,11 +57,15 @@ export class DifyStack extends cdk.Stack {
     // 2) Create the ALB Security Group in the Stack
     //    so we can pass it into both SecurityConstruct (for the EC2 inbound rule)
     //    and LoadBalancerConstruct (for the ALB itself).
-    const albSecurityGroup = new ec2.SecurityGroup(this, `ApplicationLoadBalancerSecurityGroup-${props.envKey}`, {
-      vpc: network.vpc,
-      description: `Security Group for ALB - env: ${props.envKey}`,
-      allowAllOutbound: true,
-    });
+    const albSecurityGroup = new ec2.SecurityGroup(
+      this,
+      `ApplicationLoadBalancerSecurityGroup-${props.envKey}`,
+      {
+        vpc: network.vpc,
+        description: `Security Group for ALB - env: ${props.envKey}`,
+        allowAllOutbound: true,
+      }
+    );
     albSecurityGroup.addIngressRule(
       ec2.Peer.ipv4("0.0.0.0/0"),
       ec2.Port.tcp(80),
@@ -72,14 +77,20 @@ export class DifyStack extends cdk.Stack {
       "Allow HTTPS from the world"
     );
 
-    // 3) Define which 4 IPs are allowed for SSH
-    //    (Replace these with real IPs!)
-    const sshAllowedIPs = [
-      "1.1.1.1/32",
-      "2.2.2.2/32",
-      "3.3.3.3/32",
-      "4.4.4.4/32",
-    ];
+    // 3) Define IPs allowed for SSH from environment variables
+    // Get SSH allowed IPs from environment variable and parse them
+    // Format expected: comma-separated list of CIDR blocks (e.g. "1.2.3.4/32,5.6.7.8/32")
+    const sshAllowedIPsEnv = process.env.SSH_ALLOWED_IPS || "";
+    const sshAllowedIPs = sshAllowedIPsEnv
+      ? sshAllowedIPsEnv.split(",").map((ip: string) => ip.trim())
+      : [];
+
+    // Log warning if no IPs are provided
+    if (sshAllowedIPs.length === 0) {
+      console.warn(
+        "WARNING: No SSH allowed IPs provided. SSH access will be blocked."
+      );
+    }
 
     // 4) Create the SecurityConstruct (for the EC2 instance)
     //    Pass the ALB SG and the list of SSH IPs
@@ -101,13 +112,17 @@ export class DifyStack extends cdk.Stack {
     });
 
     // 6) Create the Load Balancer
-    const albConstruct = new LoadBalancerConstruct(this, "LoadBalancerConstruct", {
-      envKey: props.envKey,
-      vpc: network.vpc,
-      ec2Instance: ec2Instance.instance,
-      certificateArn: props.certificateArn ?? "",
-      albSecurityGroup: albSecurityGroup, // Reuse the SG we created above
-    });
+    const albConstruct = new LoadBalancerConstruct(
+      this,
+      "LoadBalancerConstruct",
+      {
+        envKey: props.envKey,
+        vpc: network.vpc,
+        ec2Instance: ec2Instance.instance,
+        certificateArn: props.certificateArn ?? "",
+        albSecurityGroup: albSecurityGroup, // Reuse the SG we created above
+      }
+    );
 
     new cdk.CfnOutput(this, "ALBEndpoint", {
       value: albConstruct.loadBalancer.loadBalancerDnsName,
