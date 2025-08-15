@@ -10,9 +10,16 @@ on:
 jobs:
   cdk-diff:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: github.event.action != 'closed'
     steps:
       - uses: actions/checkout@v3
+
+      - name: Check Environment Variables
+        run: |
+          echo "Environment: ${{ inputs.environment }}"
+          echo "CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}"
+          echo "SSH_ALLOWED_IPS: ${{ secrets.SSH_ALLOWED_IPS }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -31,11 +38,8 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_DEV }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_PROD }}" >> $GITHUB_ENV
-          fi
+          echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN }}" >> $GITHUB_ENV
+          echo "SSH_ALLOWED_IPS=${{ secrets.SSH_ALLOWED_IPS }}" >> $GITHUB_ENV
 
       - name: CDK Diff
         id: cdk-diff
@@ -62,6 +66,7 @@ jobs:
 
   cdk-deploy:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: github.event.pull_request.merged == true
     steps:
       - uses: actions/checkout@v3
@@ -83,11 +88,8 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_DEV }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN_PROD }}" >> $GITHUB_ENV
-          fi
+          echo "CERTIFICATE_ARN=${{ secrets.CERTIFICATE_ARN }}" >> $GITHUB_ENV
+          echo "SSH_ALLOWED_IPS=${{ secrets.SSH_ALLOWED_IPS }}" >> $GITHUB_ENV
 
       - name: CDK Deploy
         run: npx cdk deploy -c environment=${{ inputs.environment }} --require-approval never
